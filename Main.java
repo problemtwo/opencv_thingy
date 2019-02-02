@@ -76,27 +76,25 @@ public class Main {
 				Imgproc.approxPolyDP(new MatOfPoint2f(contours.get(maxIndex).toArray()),approx,epsilon,true);
 				RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(maxIndex).toArray()));
 				// https://stackoverflow.com/questions/23327502/opencv-how-to-draw-minarearect-in-java
-				if(approx.total() == 4){
-					Point points[] = new Point[4];
-					rect.points(points);
-					for(int j=0;j<4;j++){
-						Core.line(greyView,points[j],points[(j+1)%4],new Scalar(0,255,0));
-					}
-					// https://stackoverflow.com/questions/24073127/opencvs-rotatedrect-angle-does-not-provide-enough-information
-					double angle = rect.angle;
-					if(rect.size.width < rect.size.height) {
-						angle += 90;
-					}
-					System.out.println(angle);
-					if(angle > 0 && angle < 80) {
-						System.out.println("Turn left!");
-					}
-					else if(angle < 0 && angle > -80) {
-						System.out.println("Turn right!");
-					}
-					else if(angle >= 80 || angle <= -80) {
-						System.out.println("Stay where you are!");
-					}
+				Point points[] = new Point[4];
+				rect.points(points);
+				for(int j=0;j<4;j++){
+					Core.line(greyView,points[j],points[(j+1)%4],new Scalar(0,255,0));
+				}
+				// https://stackoverflow.com/questions/24073127/opencvs-rotatedrect-angle-does-not-provide-enough-information
+				double angle = rect.angle;
+				if(rect.size.width < rect.size.height) {
+					angle += 90;
+				}
+				System.out.println(angle);
+				if(angle > 0 && angle < 80) {
+					System.out.println("Turn left!");
+				}
+				else if(angle < 0 && angle > -80) {
+					System.out.println("Turn right!");
+				}
+				else if(angle >= 80 || angle <= -80) {
+					System.out.println("Stay where you are!");
 				}
 			}
 			
@@ -104,7 +102,5 @@ public class Main {
 			panel.setImage(bi);
 			panel.repaint();
 		}
-
-
 	}
 }
