@@ -1,6 +1,6 @@
 // https://opencv-java-tutorials.readthedocs.io/en/latest/02-first-java-application-with-opencv.html
 import org.opencv.core.*;
-import org.opencv.highgui.VideoCapture;
+import org.opencv.videoio.VideoCapture;
 import org.opencv.imgproc.Imgproc;
 import javax.swing.*;
 import java.awt.GraphicsConfiguration;
@@ -9,6 +9,7 @@ import java.awt.image.DataBufferByte;
 import java.awt.image.WritableRaster;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
 
@@ -42,14 +43,20 @@ public class Main {
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setSize(840,680);
 		frame.setTitle("OpenCV Thingy");
-		frame.setVisible(true);
 
 		CvPanel panel = new CvPanel();
 		frame.setContentPane(panel);
 
+		frame.setVisible(true);
+
 		VideoCapture videoCapture = new VideoCapture(0);
 
+		long totalFrameTime = 200;
+		long startTime;
+
 		while(videoCapture.isOpened()) {
+
+			startTime = System.currentTimeMillis();
 
 			Mat webCamView = new Mat();
 			Mat greyView = new Mat();
@@ -60,47 +67,52 @@ public class Main {
 
 			videoCapture.read(webCamView);
 			Imgproc.cvtColor(webCamView,greyView,Imgproc.COLOR_BGR2GRAY);
-			Imgproc.threshold(greyView,threshView,170,255,Imgproc.THRESH_BINARY);
-			Imgproc.Canny(threshView,cannyView,10,30,3,true);
+			Imgproc.GaussianBlur(greyView,greyView,new Size(55,55),55);
+			Imgproc.threshold(greyView,threshView,230,255,Imgproc.THRESH_BINARY);
+			Imgproc.Canny(threshView,cannyView,400,1000,3,true);
 			Imgproc.findContours(cannyView,contours,new Mat(),Imgproc.RETR_LIST,Imgproc.CHAIN_APPROX_SIMPLE);
+
 			int maxIndex = 0;
+			Point pt = new Point();
 			if(contours.size() > 0){
-				for(int i=1;i<contours.size();i++) {
-					if(Imgproc.arcLength(new MatOfPoint2f(contours.get(i).toArray()),true) > 
-							Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true)){
-						maxIndex = i;		
-					}
+				for(int i=0;i<contours.size();i++) {
+					// http://answers.opencv.org/question/100989/finding-center-of-rect/
+					Rect rect = Imgproc.boundingRect(contours.get(i));
+					Point pos = new Point(0,0);
+					pos.x = (rect.tl().x + rect.br().x) * 0.5;
+					pt.x += pos.x;
 				}
-				double epsilon = 0.1 * Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true);
-				MatOfPoint2f approx = new MatOfPoint2f();
-				Imgproc.approxPolyDP(new MatOfPoint2f(contours.get(maxIndex).toArray()),approx,epsilon,true);
-				RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(maxIndex).toArray()));
-				// https://stackoverflow.com/questions/23327502/opencv-how-to-draw-minarearect-in-java
-				Point points[] = new Point[4];
-				rect.points(points);
-				for(int j=0;j<4;j++){
-					Core.line(greyView,points[j],points[(j+1)%4],new Scalar(0,255,0));
+
+				pt.x /= contours.size();
+
+				if(pt.x < 595) {
+					System.out.println("Go left and move!");
 				}
-				// https://stackoverflow.com/questions/24073127/opencvs-rotatedrect-angle-does-not-provide-enough-information
-				double angle = rect.angle;
-				if(rect.size.width < rect.size.height) {
-					angle += 90;
+				else if(pt.x > 645) {
+					System.out.println("Go right and move!");
 				}
-				System.out.println(angle);
-				if(angle > 0 && angle < 80) {
-					System.out.println("Turn left!");
-				}
-				else if(angle < 0 && angle > -80) {
-					System.out.println("Turn right!");
-				}
-				else if(angle >= 80 || angle <= -80) {
-					System.out.println("Stay where you are!");
+				else {
+					RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(0).toArray()));
+					// https://stackoverflow.com/questions/24073127/opencvs-rotatedrect-angle-does-not-provide-enough-information
+					double angle = rect.angle;
+					if(rect.size.width < rect.size.height) { angle += 90; }
+					if(angle > 0 && angle < 80) { System.out.println("Turn left!"); }
+					else if(angle < 0 && angle > -80) { System.out.println("Turn right!"); }
+					else {System.out.println("Stay where you are!");}
 				}
 			}
 			
-			BufferedImage bi = matToImage(greyView);
+			BufferedImage bi = matToImage(cannyView);
 			panel.setImage(bi);
 			panel.repaint();
+
+			if(System.currentTimeMillis() - startTime < totalFrameTime) {
+				try {
+					TimeUnit.MILLISECONDS.sleep(totalFrameTime - (System.currentTimeMillis() - startTime));
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 }
