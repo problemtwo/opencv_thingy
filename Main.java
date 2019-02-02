@@ -64,26 +64,41 @@ public class Main {
 			Imgproc.Canny(threshView,cannyView,10,30,3,true);
 			Imgproc.findContours(cannyView,contours,new Mat(),Imgproc.RETR_LIST,Imgproc.CHAIN_APPROX_SIMPLE);
 			int maxIndex = 0;
-			for(int i=1;i<contours.size();i++) {
-				if(Imgproc.arcLength(new MatOfPoint2f(contours.get(i).toArray()),true) > 
-						Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true)){
-					maxIndex = i;		
+			if(contours.size() > 0){
+				for(int i=1;i<contours.size();i++) {
+					if(Imgproc.arcLength(new MatOfPoint2f(contours.get(i).toArray()),true) > 
+							Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true)){
+						maxIndex = i;		
+					}
+				}
+				double epsilon = 0.1 * Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true);
+				MatOfPoint2f approx = new MatOfPoint2f();
+				Imgproc.approxPolyDP(new MatOfPoint2f(contours.get(maxIndex).toArray()),approx,epsilon,true);
+				RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(maxIndex).toArray()));
+				// https://stackoverflow.com/questions/23327502/opencv-how-to-draw-minarearect-in-java
+				if(approx.total() == 4){
+					Point points[] = new Point[4];
+					rect.points(points);
+					for(int j=0;j<4;j++){
+						Core.line(greyView,points[j],points[(j+1)%4],new Scalar(0,255,0));
+					}
+					// https://stackoverflow.com/questions/24073127/opencvs-rotatedrect-angle-does-not-provide-enough-information
+					double angle = rect.angle;
+					if(rect.size.width < rect.size.height) {
+						angle += 90;
+					}
+					System.out.println(angle);
+					if(angle > 0 && angle < 80) {
+						System.out.println("Turn left!");
+					}
+					else if(angle < 0 && angle > -80) {
+						System.out.println("Turn right!");
+					}
+					else if(angle >= 80 || angle <= -80) {
+						System.out.println("Stay where you are!");
+					}
 				}
 			}
-
-			double epsilon = 0.1 * Imgproc.arcLength(new MatOfPoint2f(contours.get(maxIndex).toArray()),true);
-			MatOfPoint2f approx = new MatOfPoint2f();
-			Imgproc.approxPolyDP(new MatOfPoint2f(contours.get(maxIndex).toArray()),approx,epsilon,true);
-			RotatedRect rect = Imgproc.minAreaRect(new MatOfPoint2f(contours.get(maxIndex).toArray()));
-			// https://stackoverflow.com/questions/23327502/opencv-how-to-draw-minarearect-in-java
-			if(approx.total() == 4 && rect.size.width > 50 && rect.size.width < 250 && rect.size.height > 50 && rect.size.height < 250){
-				Point points[] = new Point[4];
-				rect.points(points);
-				for(int j=0;j<4;j++){
-					Core.line(greyView,points[j],points[(j+1)%4],new Scalar(0,255,0));
-				}
-			}
-
 			
 			BufferedImage bi = matToImage(greyView);
 			panel.setImage(bi);
